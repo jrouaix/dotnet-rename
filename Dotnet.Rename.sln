@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28809.33
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dotnet.Rename", "Dotnet.Rename\Dotnet.Rename.csproj", "{E9E037CB-6BFD-4209-8618-9AC093FA5A46}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dotnet.Rename.Tests", "Dotnet.Rename.Tests\Dotnet.Rename.Tests.csproj", "{3E28BA81-F95C-4578-A8A7-A405B8F2F672}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E9E037CB-6BFD-4209-8618-9AC093FA5A46}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9E037CB-6BFD-4209-8618-9AC093FA5A46}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9E037CB-6BFD-4209-8618-9AC093FA5A46}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9E037CB-6BFD-4209-8618-9AC093FA5A46}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E28BA81-F95C-4578-A8A7-A405B8F2F672}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E28BA81-F95C-4578-A8A7-A405B8F2F672}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E28BA81-F95C-4578-A8A7-A405B8F2F672}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E28BA81-F95C-4578-A8A7-A405B8F2F672}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8156946D-3E29-43E1-B74D-3972C32A9B7E}
+	EndGlobalSection
+EndGlobal
