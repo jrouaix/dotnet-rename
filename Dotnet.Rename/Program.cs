@@ -1,14 +1,11 @@
-﻿using Buildalyzer;
-using Buildalyzer.Workspaces;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.MSBuild;
-using Microsoft.Extensions.CommandLineUtils;
+﻿using Microsoft.Extensions.CommandLineUtils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace Dotnet.Rename
 {
@@ -48,7 +45,7 @@ namespace Dotnet.Rename
 
                 if (ShouldExit(app, errors)) return 1;
 
-                var parameters = PrepareParameters(
+                var parameters = RunParameters.Create(
                     ".",
                     projectParam.Value,
                     targetParam.Value,
@@ -69,66 +66,58 @@ namespace Dotnet.Rename
             }
         }
 
-        public static RunParameters PrepareParameters(string rootFolder, string project, string target, string subfolderOptionValue)
-        {
-            if (string.Compare(Path.GetExtension(target), Path.GetExtension(project), StringComparison.InvariantCultureIgnoreCase) != 0)
-                target += Path.GetExtension(project);
 
-            var targetName = Path.GetFileNameWithoutExtension(target);
-
-            var projectUpperFolder = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetFullPath(project)));
-
-            var targetPath = Path.Combine(subfolderOptionValue ?? projectUpperFolder, targetName, target);
-
-            return new RunParameters(rootFolder, project, targetName, targetPath);
-        }
 
         public static async Task MoveProjectAsync(RunParameters parameters)
         {
-            var sourceDirectory = Path.GetDirectoryName(parameters.GetProjectPathFromRoot());
-            var targetDirectory = Path.GetDirectoryName(parameters.GetTargetPathFromRoot());
-            await MoveProjectFileAsync(parameters.GetProjectPathFromRoot(), parameters.GetTargetPathFromRoot());
+            await MoveProjectFileAsync(parameters.ProjectFullPath, parameters.TargetFullPath);
+
+            var sourceDirectory = Path.GetDirectoryName(parameters.ProjectFullPath);
+            var targetDirectory = Path.GetDirectoryName(parameters.TargetFullPath);
             await MoveDirectoryAsync(sourceDirectory, targetDirectory);
         }
 
         public static async Task MoveProjectsReferencesAsync(RunParameters parameters)
         {
-            //AdhocWorkspace
-            //var workspace = MSBuildWorkspace.Create();
-            //workspace.LoadMetadataForReferencedProjects = true;
-
             var projects = Directory.GetFiles(parameters.RootPath, "*.csproj", SearchOption.AllDirectories);
-            var solutions = Directory.GetFiles(parameters.RootPath, "*.sln", SearchOption.AllDirectories);
-
-            //foreach (var solution in solutions)
-            //{
-            //    //workspace.OpenProjectAsync()
-            //    //workspace.AddSolution(SolutionInfo.Create(SolutionId.CreateNewId(), ))
-            //}
-
-            //var renamedProject = await workspace.OpenProjectAsync(parameters.GetTargetPathFromRoot());
-
-
-            var workspace = new AdhocWorkspace();
-            var manager = new AnalyzerManager();
-            
 
             foreach (var projFile in projects)
             {
-                ProjectAnalyzer analyzer = manager.GetProject(projFile);
-                var project = analyzer.AddToWorkspace(workspace);
-                
-                    //var p = await workspace.OpenProjectAsync(project);
+                var isTheRenamedProject = Path.GetFullPath(projFile) == Path.GetFullPath(parameters.TargetPath);
+                var projDirectory = Path.GetDirectoryName(projFile);
 
+                var xml = new XmlDocument();
+                xml.Load(projFile);
 
-                foreach (var reference in project.ProjectReferences)
+                foreach (var pRef in xml.SelectNodes("//ProjectReference").Cast<XmlNode>())
                 {
-                    //var ren = renamedProject.Id;
-                    var id = reference.ProjectId;
-                    //p.remo
+                    var includeAtt = pRef.Attributes["Include"];
+                    var includePath = includeAtt?.Value;
+                    if (includePath == null) continue;
+
+                    var fullPath = Path.IsPathRooted(includePath) ? includePath : Path.Combine(projDirectory, includePath);
+                    
+                    if (!File.Exists(fullPath))
+                    {
+                        if (isTheRenamedProject)
+                        {
+                            includeAtt.Value = parameters.GetRelativePathFromTarget(includePath);
+                        }
+
+                        // NOTE : projFile IS A RELATIVE PATH
+                        //else if(Path.Combine(projDirectory, includePath)
+                        //{
+                        //    if ()
+                        //        includeAtt.Value = parameters.GetTargetPathFrom;
+                        //}
+                    }
                 }
-                //workspace.AddProjects(projects.Select(s => ProjectInfo.Create({ )
+
+                xml.Save(projFile);
             }
+
+
+            var solutions = Directory.GetFiles(parameters.RootPath, "*.sln", SearchOption.AllDirectories);
         }
 
 

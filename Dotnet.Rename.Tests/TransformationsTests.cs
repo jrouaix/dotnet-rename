@@ -32,7 +32,7 @@ namespace Dotnet.Rename.Tests
         [Fact]
         public async Task MoveProjectDirectory()
         {
-            var parameters = Program.PrepareParameters(_sampleSolutionPath, "./SampleApp/SampleApp.csproj", "Sample.App", "src");
+            var parameters = RunParameters.Create(_sampleSolutionPath, "./SampleApp/SampleApp.csproj", "Sample.App", "src");
 
             await Program.MoveProjectAsync(parameters);
         }
@@ -40,7 +40,7 @@ namespace Dotnet.Rename.Tests
         [Fact]
         public async Task MoveProjectsReferences()
         {
-            var parameters = Program.PrepareParameters(_sampleSolutionPath, "./SampleApp/SampleApp.csproj", "Sample.App", "src");
+            var parameters = RunParameters.Create(_sampleSolutionPath, "./SampleApp/SampleApp.csproj", "Sample.App", "src");
 
             await Program.MoveProjectAsync(parameters);
             await Program.MoveProjectsReferencesAsync(parameters);
