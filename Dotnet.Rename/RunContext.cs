@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Dotnet.Rename
 {
-    public class RunParameters
+    public class RunContext
     {
         /// <summary>
         /// 
@@ -14,7 +14,7 @@ namespace Dotnet.Rename
         /// <param name="project"></param>
         /// <param name="target"></param>
         /// <param name="subfolderOptionValue"></param>
-        public static RunParameters Create(string rootFolder, string project, string target, string subfolderOptionValue = null)
+        public static RunContext Create(string rootFolder, string project, string target, string subfolderOptionValue = null, Action<string> logger = null)
         {
             if (string.Compare(Path.GetExtension(target), Path.GetExtension(project), StringComparison.InvariantCultureIgnoreCase) != 0)
                 target += Path.GetExtension(project);
@@ -26,16 +26,17 @@ namespace Dotnet.Rename
 
             var targetPath = Path.Combine(".", subfolderOptionValue ?? projectUpperFolder, targetName, target);
 
-            return new RunParameters(rootFolder, project, targetName, targetFileName, targetPath);
+            return new RunContext(rootFolder, project, targetName, targetFileName, targetPath, logger ?? (s => { }));
         }
 
-        private RunParameters(string rootPath, string project, string targetName, string targetFileName, string targetPath)
+        private RunContext(string rootPath, string project, string targetName, string targetFileName, string targetPath, Action<string> logger)
         {
             RootPath = rootPath;
             Project = project;
             TargetName = targetName;
             TargetFileName = targetFileName;
             TargetPath = targetPath;
+            Logger = logger;
 
             Move = Path.GetRelativePath(Path.GetDirectoryName(Project), Path.GetDirectoryName(TargetPath));
             InvertedMove = Path.GetRelativePath(Path.GetDirectoryName(TargetPath), Path.GetDirectoryName(Project));
@@ -66,6 +67,8 @@ namespace Dotnet.Rename
 
         public string Move { get; }
         public string InvertedMove { get; }
+
+        public Action<string> Logger { get; }
 
         public string GetRelativePathFromTarget(string relativePathFromProject)
         {

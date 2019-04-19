@@ -29,7 +29,7 @@ namespace Dotnet.Rename
             var subfolderOption = app.Option(SUBFOLDER_OPTION, "Enter the relative (from current directory) path to a subfolder where the new project (and project folder) will be placed.", CommandOptionType.SingleValue);
 
 
-            app.OnExecute(() =>
+            app.OnExecute(async () =>
             {
                 var errors = new List<string>();
                 if (projectParam.Value == null)
@@ -47,12 +47,15 @@ namespace Dotnet.Rename
 
                 if (ShouldExit(app, errors)) return 1;
 
-                var parameters = RunParameters.Create(
+                var context = RunContext.Create(
                     ".",
                     projectParam.Value,
                     targetParam.Value,
-                    subfolderOption.HasValue() ? subfolderOption.Value() : null
+                    subfolderOption.HasValue() ? subfolderOption.Value() : null,
+                    Console.WriteLine
                     );
+
+                await RunAsync(context);
 
                 return 0;
             });
@@ -68,29 +71,35 @@ namespace Dotnet.Rename
             }
         }
 
-        public static async Task Run(RunParameters parameters)
+        public static async Task RunAsync(RunContext context)
         {
-            await MoveProjectAsync(parameters);
-            await MoveProjectsReferencesAsync(parameters);
-            await MoveSolutionsReferencesAsync(parameters);
+            context.Logger($"Moving {context}.");
+            await MoveProjectAsync(context);
+            await MoveProjectsReferencesAsync(context);
+            await MoveSolutionsReferencesAsync(context);
         }
 
-        public static async Task MoveProjectAsync(RunParameters parameters)
+        public static async Task MoveProjectAsync(RunContext context)
         {
-            await MoveProjectFileAsync(parameters.ProjectFullPath, parameters.TargetFullPath);
+            context.Logger($"Moving project file {context.ProjectFullPath} to {context.TargetFullPath}.");
+            await MoveProjectFileAsync(context.ProjectFullPath, context.TargetFullPath);
 
-            var sourceDirectory = Path.GetDirectoryName(parameters.ProjectFullPath);
-            var targetDirectory = Path.GetDirectoryName(parameters.TargetFullPath);
+            var sourceDirectory = Path.GetDirectoryName(context.ProjectFullPath);
+            var targetDirectory = Path.GetDirectoryName(context.TargetFullPath);
+
+            context.Logger($"Moving directory {sourceDirectory} to {targetDirectory}.");
             await MoveDirectoryAsync(sourceDirectory, targetDirectory);
         }
 
-        public static async Task MoveProjectsReferencesAsync(RunParameters parameters)
+        public static async Task MoveProjectsReferencesAsync(RunContext context)
         {
-            var projects = Directory.GetFiles(parameters.RootPath, "*.csproj", SearchOption.AllDirectories);
+            var projects = Directory.GetFiles(context.RootPath, "*.csproj", SearchOption.AllDirectories);
 
             foreach (var projFile in projects)
             {
-                var isTheRenamedProject = Path.GetFullPath(projFile) == Path.GetFullPath(parameters.TargetFullPath);
+                context.Logger($"Updating {projFile}");
+
+                var isTheRenamedProject = Path.GetFullPath(projFile) == Path.GetFullPath(context.TargetFullPath);
                 var projDirectory = Path.GetDirectoryName(projFile);
 
                 var xml = new XmlDocument();
@@ -107,10 +116,14 @@ namespace Dotnet.Rename
 
                     if (!File.Exists(fullPath))
                     {
+                        context.Logger($"Unable to find reference '{includePath}' ({fullPath}) ... Updating ...");
+
                         var newIncludePath = isTheRenamedProject
-                            ? parameters.GetRelativePathFromTarget(includePath)
-                            : parameters.GetTargetPathFromPreviousPath(projFile, includePath)
+                            ? context.GetRelativePathFromTarget(includePath)
+                            : context.GetTargetPathFromPreviousPath(projFile, includePath)
                             ;
+
+                        context.Logger($"... to {newIncludePath}.");
 
                         var newFullPath = Path.Combine(projDirectory, newIncludePath);
                         if (!File.Exists(newFullPath))
@@ -124,16 +137,16 @@ namespace Dotnet.Rename
             }
         }
 
-        public static async Task MoveSolutionsReferencesAsync(RunParameters parameters)
+        public static async Task MoveSolutionsReferencesAsync(RunContext context)
         {
-            var solutions = Directory.GetFiles(parameters.RootPath, "*.sln", SearchOption.AllDirectories);
+            var solutions = Directory.GetFiles(context.RootPath, "*.sln", SearchOption.AllDirectories);
 
             foreach (var solutionFile in solutions)
             {
                 var solution = SolutionFile.Parse(Path.GetFullPath(solutionFile));
                 foreach (var project in solution.ProjectsInOrder)
                 {
-                    var isTheRenamedProject = project.AbsolutePath == Path.GetFullPath(parameters.ProjectFullPath);
+                    var isTheRenamedProject = project.AbsolutePath == Path.GetFullPath(context.ProjectFullPath);
                     if (!isTheRenamedProject) continue;
 
                     var file = await File.ReadAllLinesAsync(solutionFile);
@@ -143,13 +156,13 @@ namespace Dotnet.Rename
                         var thisIsTheLine = line.StartsWith("Project(\"") && line.Contains(project.RelativePath);
                         if (thisIsTheLine)
                         {
-                            var projectNewPath = parameters.GetTargetPathFromPreviousPath(Path.GetRelativePath(parameters.RootPath, solutionFile), project.RelativePath);
+                            var projectNewPath = context.GetTargetPathFromPreviousPath(Path.GetRelativePath(context.RootPath, solutionFile), project.RelativePath);
 
                             file[i] = line
-                                .Replace($"\"{project.ProjectName}\"", $"\"{parameters.TargetName}\"")
+                                .Replace($"\"{project.ProjectName}\"", $"\"{context.TargetName}\"")
                                 .Replace($"\"{project.RelativePath}\"", $"\"{projectNewPath}\"")
                                 ;
-                                break;
+                            break;
                         }
                     }
 
