@@ -16,7 +16,7 @@ steps:
 - script: dotnet build --no-restore --configuration Release
   displayName: 'dotnet build'
 
-- script: dotnet test --no-restore Release
+- script: dotnet test --no-restore --configuration Release
   displayName: 'dotnet test'
 
 - script: dotnet pack ./Dotnet.Rename/Dotnet.Rename.csproj --no-restore --configuration Release --output $(Build.ArtifactStagingDirectory)
