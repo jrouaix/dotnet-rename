@@ -105,5 +105,21 @@ namespace Dotnet.Rename.Tests
 
             Path.GetFullPath(move).ShouldBe(Path.GetFullPath(expected));
         }
+
+        [Theory]
+        [InlineData("src/test/test.csproj", "test2", null, "../test/test.csproj", "../test2/test2.csproj")]
+        [InlineData("src/test/test.csproj", "test2", "src", "../test/test.csproj", "../test2/test2.csproj")]
+        [InlineData("src/test/test.csproj", "test2", "src2", "../test/test.csproj", "../../src2/test2/test2.csproj")]
+        [InlineData("src/test/test.csproj", "test2", "src/subfolder", "../test/test.csproj", "../subfolder/test2/test2.csproj")]
+        [InlineData("src/test/test.csproj", "test2", "tests", "../test/test.csproj", "../../tests/test2/test2.csproj")]
+        [InlineData("test/test.csproj", "test2", null, "../../test/test.csproj", "../../test2/test2.csproj")]
+        [InlineData("test/test.csproj", "test2", "src", "../../test/test.csproj", "../test2/test2.csproj")]
+        public void GetTargetPathFromPreviousPath(string project, string target, string subfolderOptionValue, string relativePathFromProject, string expected)
+        {
+            var parameters = RunParameters.Create(".", project, target, subfolderOptionValue);
+            var move = parameters.GetTargetPathFromPreviousPath("src/project/project.csproj", relativePathFromProject);
+
+            Path.GetFullPath(move).ShouldBe(Path.GetFullPath(expected));
+        }
     }
 }

@@ -1,9 +1,11 @@
-﻿using Microsoft.Extensions.CommandLineUtils;
+﻿using Microsoft.Build.Construction;
+using Microsoft.Extensions.CommandLineUtils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 
@@ -66,7 +68,12 @@ namespace Dotnet.Rename
             }
         }
 
-
+        public static async Task Run(RunParameters parameters)
+        {
+            await MoveProjectAsync(parameters);
+            await MoveProjectsReferencesAsync(parameters);
+            await MoveSolutionsReferencesAsync(parameters);
+        }
 
         public static async Task MoveProjectAsync(RunParameters parameters)
         {
@@ -83,7 +90,7 @@ namespace Dotnet.Rename
 
             foreach (var projFile in projects)
             {
-                var isTheRenamedProject = Path.GetFullPath(projFile) == Path.GetFullPath(parameters.TargetPath);
+                var isTheRenamedProject = Path.GetFullPath(projFile) == Path.GetFullPath(parameters.TargetFullPath);
                 var projDirectory = Path.GetDirectoryName(projFile);
 
                 var xml = new XmlDocument();
@@ -94,32 +101,64 @@ namespace Dotnet.Rename
                     var includeAtt = pRef.Attributes["Include"];
                     var includePath = includeAtt?.Value;
                     if (includePath == null) continue;
+                    if (Path.IsPathRooted(includePath)) continue;
 
-                    var fullPath = Path.IsPathRooted(includePath) ? includePath : Path.Combine(projDirectory, includePath);
-                    
+                    var fullPath = Path.Combine(projDirectory, includePath);
+
                     if (!File.Exists(fullPath))
                     {
-                        if (isTheRenamedProject)
-                        {
-                            includeAtt.Value = parameters.GetRelativePathFromTarget(includePath);
-                        }
+                        var newIncludePath = isTheRenamedProject
+                            ? parameters.GetRelativePathFromTarget(includePath)
+                            : parameters.GetTargetPathFromPreviousPath(projFile, includePath)
+                            ;
 
-                        // NOTE : projFile IS A RELATIVE PATH
-                        //else if(Path.Combine(projDirectory, includePath)
-                        //{
-                        //    if ()
-                        //        includeAtt.Value = parameters.GetTargetPathFrom;
-                        //}
+                        var newFullPath = Path.Combine(projDirectory, newIncludePath);
+                        if (!File.Exists(newFullPath))
+                            throw new InvalidProgramException($"Something is fishy, {newFullPath} file should exists");
+
+                        includeAtt.Value = newIncludePath;
                     }
                 }
 
                 xml.Save(projFile);
             }
-
-
-            var solutions = Directory.GetFiles(parameters.RootPath, "*.sln", SearchOption.AllDirectories);
         }
 
+        public static async Task MoveSolutionsReferencesAsync(RunParameters parameters)
+        {
+            var solutions = Directory.GetFiles(parameters.RootPath, "*.sln", SearchOption.AllDirectories);
+
+            foreach (var solutionFile in solutions)
+            {
+                var solution = SolutionFile.Parse(Path.GetFullPath(solutionFile));
+                foreach (var project in solution.ProjectsInOrder)
+                {
+                    var isTheRenamedProject = project.AbsolutePath == Path.GetFullPath(parameters.ProjectFullPath);
+                    if (!isTheRenamedProject) continue;
+
+                    var file = await File.ReadAllLinesAsync(solutionFile);
+                    for (int i = 0; i < file.Length; i++)
+                    {
+                        var line = file[i];
+                        var thisIsTheLine = line.StartsWith("Project(\"") && line.Contains(project.RelativePath);
+                        if (thisIsTheLine)
+                        {
+                            var projectNewPath = parameters.GetTargetPathFromPreviousPath(Path.GetRelativePath(parameters.RootPath, solutionFile), project.RelativePath);
+
+                            file[i] = line
+                                .Replace($"\"{project.ProjectName}\"", $"\"{parameters.TargetName}\"")
+                                .Replace($"\"{project.RelativePath}\"", $"\"{projectNewPath}\"")
+                                ;
+                                break;
+                        }
+                    }
+
+                    await File.WriteAllLinesAsync(solutionFile, file);
+
+                    break;
+                }
+            }
+        }
 
         static bool ShouldExit(CommandLineApplication app, List<string> errors)
         {
@@ -208,6 +247,7 @@ namespace Dotnet.Rename
                             Directory.CreateDirectory(Path.GetDirectoryName(newPath));
                             File.Move(file, newPath);
                         }
+                        Directory.Delete(source, true);
                     }
                 }
             }

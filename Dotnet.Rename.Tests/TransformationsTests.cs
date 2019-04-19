@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -44,6 +45,33 @@ namespace Dotnet.Rename.Tests
 
             await Program.MoveProjectAsync(parameters);
             await Program.MoveProjectsReferencesAsync(parameters);
+
+        }
+
+        [Fact]
+        public async Task MoveSolutionsReferencesAsync()
+        {
+            var parameters = RunParameters.Create(_sampleSolutionPath, "./SampleApp/SampleApp.csproj", "Sample.App", "src");
+
+            await Program.MoveProjectAsync(parameters);
+            await Program.MoveSolutionsReferencesAsync(parameters);
+        }
+
+        [Fact]
+        public async Task Run()
+        {
+            var parameters = RunParameters.Create(_sampleSolutionPath, "./SampleApp/SampleApp.csproj", "Sample.App", "src");
+            await Program.Run(parameters);
+        }
+
+        [Fact]
+        public async Task RunMultipleChanges()
+        {
+            await Program.Run(RunParameters.Create(_sampleSolutionPath, "./SampleApp/SampleApp.csproj", "Sample.App", "src"));
+            await Program.Run(RunParameters.Create(_sampleSolutionPath, "./SampleLib/SampleLib.csproj", "SampleLib", "src"));
+            await Program.Run(RunParameters.Create(_sampleSolutionPath, "./src/SampleLib/SampleLib.csproj", "Sample.Lib.csproj"));
+            await Program.Run(RunParameters.Create(_sampleSolutionPath, "./tests/SampleTests/SampleTests.csproj", "Sample.Tests"));
+            await Program.Run(RunParameters.Create(_sampleSolutionPath, "./src/Sample.App/Sample.App.csproj", "Sample2.App", "src"));
         }
     }
 }
