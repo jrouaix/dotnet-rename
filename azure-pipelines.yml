@@ -13,13 +13,13 @@ steps:
 - script: dotnet restore
   displayName: 'dotnet restore'
 
-- script: dotnet build --no-restore --configuration $(buildConfiguration)
+- script: dotnet build --no-restore --configuration Release
   displayName: 'dotnet build'
 
-- script: dotnet test --no-restore $(buildConfiguration)
+- script: dotnet test --no-restore Release
   displayName: 'dotnet test'
 
-- script: dotnet pack ./Dotnet.Rename/Dotnet.Rename.csproj --no-restore --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)
+- script: dotnet pack ./Dotnet.Rename/Dotnet.Rename.csproj --no-restore --configuration Release --output $(Build.ArtifactStagingDirectory)
   displayName: 'dotnet pack'
 
 - task: NuGetCommand@2
