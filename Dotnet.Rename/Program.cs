@@ -114,7 +114,7 @@ namespace Dotnet.Rename
 
                         var newFullPath = Path.Combine(projDirectory, newIncludePath);
                         if (!File.Exists(newFullPath))
-                            throw new InvalidProgramException($"Something is fishy, {newFullPath} file should exists");
+                            throw new InvalidProgramException($"Something is fishy, {newFullPath} file should exist.");
 
                         includeAtt.Value = newIncludePath;
                     }

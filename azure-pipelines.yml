@@ -10,10 +10,20 @@ pool:
   vmImage: 'Ubuntu-16.04'
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+- script: dotnet restore
+  displayName: 'dotnet restore'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+- script: dotnet build --no-restore --configuration $(buildConfiguration)
+  displayName: 'dotnet build'
+
+- script: dotnet test --no-restore $(buildConfiguration)
+  displayName: 'dotnet test'
+
+- script: dotnet pack ./Dotnet.Rename/Dotnet.Rename.csproj --no-restore --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)
+  displayName: 'dotnet pack'
+
+- task: NuGetCommand@2
+  inputs:
+    command: push
+    nuGetFeedType: external
+    publishFeedCredentials: 'nuget'
