@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Dotnet.Rename.Tests
 {
-    public class ProgramTests
+    public class RunContextTests
     {
         [Theory]
         [InlineData("src/test/test.csproj", "test2", null, "src/test/test.csproj", "test2", "src/test2/test2.csproj")]

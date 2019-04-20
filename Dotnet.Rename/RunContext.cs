@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using static Dotnet.Rename.PathHelper;
 
 namespace Dotnet.Rename
 {
@@ -22,24 +23,24 @@ namespace Dotnet.Rename
             var targetFileName = target;
             var targetName = Path.GetFileNameWithoutExtension(target);
 
-            var projectUpperFolder = Path.GetDirectoryName(Path.GetDirectoryName(project));
+            var projectUpperFolder = Path.GetDirectoryName(Path.GetDirectoryName(P(project)));
 
-            var targetPath = Path.Combine(".", subfolderOptionValue ?? projectUpperFolder, targetName, target);
+            var targetPath = Path.Combine(".", P(subfolderOptionValue ?? projectUpperFolder), targetName, target);
 
             return new RunContext(rootFolder, project, targetName, targetFileName, targetPath, logger ?? (s => { }));
         }
 
         private RunContext(string rootPath, string project, string targetName, string targetFileName, string targetPath, Action<string> logger)
         {
-            RootPath = rootPath;
-            Project = project;
+            RootPath = P(rootPath);
+            Project = P(project);
             TargetName = targetName;
             TargetFileName = targetFileName;
-            TargetPath = targetPath;
+            TargetPath = P(targetPath);
             Logger = logger;
 
-            Move = Path.GetRelativePath(Path.GetDirectoryName(Project), Path.GetDirectoryName(TargetPath));
-            InvertedMove = Path.GetRelativePath(Path.GetDirectoryName(TargetPath), Path.GetDirectoryName(Project));
+            Move = P(Path.GetRelativePath(Path.GetDirectoryName(P(Project)), Path.GetDirectoryName(P(TargetPath))));
+            InvertedMove = P(Path.GetRelativePath(Path.GetDirectoryName(P(TargetPath)), Path.GetDirectoryName(P(Project))));
         }
 
         /// <summary>
@@ -50,7 +51,7 @@ namespace Dotnet.Rename
         /// Original csproj file path (relative to the RootPath)
         /// </summary>
         public string Project { get; }
-        public string ProjectFullPath { get => Path.Combine(RootPath, Project); }
+        public string ProjectFullPath { get => P(Path.Combine(RootPath, Project)); }
         /// <summary>
         /// New project name
         /// </summary>
@@ -63,7 +64,7 @@ namespace Dotnet.Rename
         /// New csproj file path (relative to the RootPath)
         /// </summary>
         public string TargetPath { get; }
-        public string TargetFullPath { get => Path.Combine(RootPath, TargetPath); }
+        public string TargetFullPath { get => P(Path.Combine(RootPath, TargetPath)); }
 
         public string Move { get; }
         public string InvertedMove { get; }
@@ -76,7 +77,7 @@ namespace Dotnet.Rename
             var targetDirectory = Path.GetDirectoryName(TargetPath);
             var fullyAppliedPath = Path.Combine(targetDirectory, movedRelative);
 
-            var newRelative = Path.GetRelativePath(targetDirectory, fullyAppliedPath);
+            var newRelative = P(Path.GetRelativePath(targetDirectory, fullyAppliedPath));
             return newRelative;
         }
 
@@ -89,7 +90,7 @@ namespace Dotnet.Rename
             if (string.IsNullOrWhiteSpace(projectDirectory))
                 projectDirectory = ".";
 
-            var newRelative = Path.GetRelativePath(projectDirectory, fullyAppliedPath);
+            var newRelative = P(Path.GetRelativePath(projectDirectory, fullyAppliedPath));
             return newRelative;
         }
 
