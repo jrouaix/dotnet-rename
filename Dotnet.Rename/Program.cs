@@ -177,13 +177,13 @@ namespace Dotnet.Rename
 
         static bool ShouldExit(CommandLineApplication app, List<string> errors)
         {
-            if (errors.Count == 0) return true;
+            if (errors.Count == 0) return false;
 
             foreach (var err in errors)
                 Console.Error.WriteLine(err);
             app.ShowHelp();
 
-            return false;
+            return true;
         }
 
         /// <summary>
