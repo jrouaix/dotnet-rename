@@ -16,14 +16,16 @@ In your repository folder:
 
 To move project MyLib/MyLib.csproj to src/My.Lib/My.Lib.csproj:
 
-~/myrepo/$ `dotnet-rename MyProject/MyProject.csproj My.Project -s src`
-
-
-### Update
-
-`dotnet tool update -g Dotnet.Rename`
+~/git/dotnet-rename/_sample/$ `dotnet-rename dotnet-rename SampleLib\SampleLib.csproj Sample.Lib -s src`
 
 ### Limitations
 
 Didn't get namespace renaming (solutions wide) ... contributions are welcome or any sugestion on the way to achieve that properly.
 
+### Update
+
+`dotnet tool update -g Dotnet.Rename`
+
+### Uninstall
+
+`dotnet tool uninstall -g Dotnet.Rename`
