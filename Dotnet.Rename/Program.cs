@@ -74,7 +74,7 @@ namespace Dotnet.Rename
 
         public static async Task RunAsync(RunContext context)
         {
-            context.Logger($"Moving {context}.");
+            context.Logger($"Moving '{context}'.");
             await MoveProjectAsync(context);
             await MoveProjectsReferencesAsync(context);
             await MoveSolutionsReferencesAsync(context);
@@ -82,13 +82,13 @@ namespace Dotnet.Rename
 
         public static async Task MoveProjectAsync(RunContext context)
         {
-            context.Logger($"Moving project file {context.ProjectFullPath} to {context.TargetFullPath}.");
+            context.Logger($"Moving project file '{context.ProjectFullPath}' to '{context.TargetFullPath}'.");
             await MoveProjectFileAsync(context.ProjectFullPath, context.TargetFullPath);
 
             var sourceDirectory = Path.GetDirectoryName(context.ProjectFullPath);
             var targetDirectory = Path.GetDirectoryName(context.TargetFullPath);
 
-            context.Logger($"Moving directory {sourceDirectory} to {targetDirectory}.");
+            context.Logger($"Moving directory '{sourceDirectory}' to '{targetDirectory}'.");
             await MoveDirectoryAsync(sourceDirectory, targetDirectory);
         }
 
@@ -98,7 +98,7 @@ namespace Dotnet.Rename
 
             foreach (var projFile in projects)
             {
-                context.Logger($"Updating {projFile}");
+                context.Logger($"Updating '{projFile}'");
 
                 var isTheRenamedProject = Path.GetFullPath(projFile) == Path.GetFullPath(context.TargetFullPath);
                 var projDirectory = Path.GetDirectoryName(projFile);
@@ -111,20 +111,21 @@ namespace Dotnet.Rename
                     var includeAtt = pRef.Attributes["Include"];
                     var includePath = includeAtt?.Value;
                     if (includePath == null) continue;
+                    includePath = P(includePath);
                     if (Path.IsPathRooted(includePath)) continue;
 
                     var fullPath = Path.Combine(projDirectory, includePath);
 
                     if (!File.Exists(fullPath))
                     {
-                        context.Logger($"Unable to find reference '{includePath}' ({fullPath}) ... Updating ...");
+                        context.Logger($"Unable to find reference '{includePath}' ('{fullPath}') ... Updating ...");
 
                         var newIncludePath = isTheRenamedProject
                             ? context.GetRelativePathFromTarget(includePath)
                             : context.GetTargetPathFromPreviousPath(projFile, includePath)
                             ;
 
-                        context.Logger($"... to {newIncludePath}.");
+                        context.Logger($"... to '{newIncludePath}'.");
 
                         var newFullPath = Path.Combine(projDirectory, newIncludePath);
                         if (!File.Exists(newFullPath))
