@@ -5,6 +5,9 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <ToolCommandName>dotnet-rename</ToolCommandName>
     <PackAsTool>true</PackAsTool>
+    <PackageVersion>0.0.1</PackageVersion>
+    <PackageDescription>A global tool to reduce pain when moving/renaming projects repository wide.</PackageDescription>
+    <RepositoryUrl>https://github.com/jrouaix/dotnet-rename</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
