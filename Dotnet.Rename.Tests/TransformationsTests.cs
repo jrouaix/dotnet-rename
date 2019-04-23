@@ -16,16 +16,11 @@ namespace Dotnet.Rename.Tests
 
         public TransformationsTests(ITestOutputHelper output)
         {
+            _output = output;
+
             _sampleSolutionPath = Path.GetRandomFileName();
             var originalSampleSolution = "../../../../_sample";
-
-            foreach (string dirPath in Directory.GetDirectories(originalSampleSolution, "*", SearchOption.AllDirectories))
-                Directory.CreateDirectory(dirPath.Replace(originalSampleSolution, _sampleSolutionPath));
-
-            foreach (string newPath in Directory.GetFiles(originalSampleSolution, "*", SearchOption.AllDirectories))
-                File.Copy(newPath, newPath.Replace(originalSampleSolution, _sampleSolutionPath), true);
-
-            this._output = output;
+            FileSystemHelper.Copy(originalSampleSolution, _sampleSolutionPath);
         }
 
         public void Dispose()

@@ -16,7 +16,7 @@ In your repository folder:
 
 To move project MyLib/MyLib.csproj to src/My.Lib/My.Lib.csproj:
 
-~/git/dotnet-rename/_sample/$ `dotnet-rename dotnet-rename SampleLib\SampleLib.csproj Sample.Lib -s src`
+~/git/dotnet-rename/_sample/$ `dotnet-rename SampleLib/SampleLib.csproj Sample.Lib -s src`
 
 ### Limitations
 
