@@ -43,6 +43,23 @@ namespace Dotnet.Rename.Tests
 
             using (var process = Process.Start(new ProcessStartInfo
             {
+                FileName = "dotnet",
+                Arguments = $"tool list -g",
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                WorkingDirectory = sampleExecutionPath
+            }))
+            {
+                process.WaitForExit();
+                if (process.ExitCode != 0)
+                    throw new Exception($"Failed : '{process.StandardError.ReadToEnd()}'");
+
+                _output.WriteLine($"Tools list : '{process.StandardOutput.ReadToEnd()}'");
+            }
+
+            using (var process = Process.Start(new ProcessStartInfo
+            {
                 FileName = COMMAND_NAME,
                 Arguments = $"SampleLib/SampleLib.csproj Sample.Lib -s src",
                 RedirectStandardError = true,
