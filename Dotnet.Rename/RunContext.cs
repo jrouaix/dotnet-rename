@@ -17,6 +17,8 @@ namespace Dotnet.Rename
         /// <param name="subfolderOptionValue"></param>
         public static RunContext Create(string rootFolder, string project, string target, string subfolderOptionValue = null, Action<string> logger = null)
         {
+            var projectFileName = Path.GetFileName(project);
+
             if (string.Compare(Path.GetExtension(target), Path.GetExtension(project), StringComparison.InvariantCultureIgnoreCase) != 0)
                 target += Path.GetExtension(project);
 
@@ -25,17 +27,21 @@ namespace Dotnet.Rename
 
             var projectUpperFolder = Path.GetDirectoryName(Path.GetDirectoryName(P(project)));
 
-            var targetPath = Path.Combine(".", P(subfolderOptionValue ?? projectUpperFolder), targetName, target);
+            var targetPath = Path.Combine(P(subfolderOptionValue ?? projectUpperFolder), targetName, target);
 
-            return new RunContext(rootFolder, project, targetName, targetFileName, targetPath, logger ?? (s => { }));
+            return new RunContext(rootFolder, project, projectFileName, targetName, targetFileName, targetPath, logger ?? (s => { }));
         }
 
-        private RunContext(string rootPath, string project, string targetName, string targetFileName, string targetPath, Action<string> logger)
+        private RunContext(string rootPath, string project, string projectFileName, string targetName, string targetFileName, string targetPath, Action<string> logger)
         {
             RootPath = P(rootPath);
+
             Project = P(project);
+            ProjectFileName = projectFileName;
+
             TargetName = targetName;
             TargetFileName = targetFileName;
+
             TargetPath = P(targetPath);
             Logger = logger;
 
@@ -51,6 +57,10 @@ namespace Dotnet.Rename
         /// Original csproj file path (relative to the RootPath)
         /// </summary>
         public string Project { get; }
+        /// <summary>
+        /// Project file name only
+        /// </summary>
+        public string ProjectFileName { get; }
         public string ProjectFullPath { get => P(Path.Combine(RootPath, Project)); }
         /// <summary>
         /// New project name

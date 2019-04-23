@@ -30,30 +30,29 @@ namespace Dotnet.Rename.Tests
         }
 
         [Fact]
-        public async Task MoveProjectDirectory()
+        public async Task MoveProject()
         {
             var parameters = RunContext.Create(_sampleSolutionPath, "./SampleApp/SampleApp.csproj", "Sample.App", "src", logger: _output.WriteLine);
 
-            await Program.MoveProjectAsync(parameters);
+            Program.MoveProject(parameters);
         }
 
         [Fact]
-        public async Task MoveProjectsReferences()
+        public async Task ChangeProjectsReferences()
         {
             var parameters = RunContext.Create(_sampleSolutionPath, "./SampleApp/SampleApp.csproj", "Sample.App", "src", logger: _output.WriteLine);
 
-            await Program.MoveProjectAsync(parameters);
-            await Program.MoveProjectsReferencesAsync(parameters);
-
+            Program.MoveProject(parameters);
+            await Program.ChangeProjectsReferencesAsync(parameters);
         }
 
         [Fact]
-        public async Task MoveSolutionsReferencesAsync()
+        public async Task ChangeSolutionsReferencesAsync()
         {
             var parameters = RunContext.Create(_sampleSolutionPath, "./SampleApp/SampleApp.csproj", "Sample.App", "src", logger: _output.WriteLine);
 
-            await Program.MoveProjectAsync(parameters);
-            await Program.MoveSolutionsReferencesAsync(parameters);
+            Program.MoveProject(parameters);
+            await Program.ChangeSolutionsReferencesAsync(parameters);
         }
 
         [Fact]

@@ -75,24 +75,30 @@ namespace Dotnet.Rename
         public static async Task RunAsync(RunContext context)
         {
             context.Logger($"Moving '{context}'.");
-            await MoveProjectAsync(context);
-            await MoveProjectsReferencesAsync(context);
-            await MoveSolutionsReferencesAsync(context);
+            MoveProject(context);
+            await ChangeProjectsReferencesAsync(context);
+            await ChangeSolutionsReferencesAsync(context);
         }
 
-        public static async Task MoveProjectAsync(RunContext context)
+        public static void MoveProject(RunContext context)
         {
             context.Logger($"Moving project file '{context.ProjectFullPath}' to '{context.TargetFullPath}'.");
-            await MoveProjectFileAsync(context.ProjectFullPath, context.TargetFullPath);
 
             var sourceDirectory = Path.GetDirectoryName(context.ProjectFullPath);
             var targetDirectory = Path.GetDirectoryName(context.TargetFullPath);
-
             context.Logger($"Moving directory '{sourceDirectory}' to '{targetDirectory}'.");
-            await MoveDirectoryAsync(sourceDirectory, targetDirectory);
+
+            if (ShouldUseGit(context))
+            {
+                MoveFolderUsingGit(sourceDirectory, targetDirectory);
+            }
+            else
+            {
+                StandardMoveFolder(sourceDirectory, targetDirectory);
+            }
         }
 
-        public static async Task MoveProjectsReferencesAsync(RunContext context)
+        public static async Task ChangeProjectsReferencesAsync(RunContext context)
         {
             var projects = Directory.GetFiles(context.RootPath, "*.csproj", SearchOption.AllDirectories);
 
@@ -106,6 +112,8 @@ namespace Dotnet.Rename
                 var xml = new XmlDocument();
                 xml.Load(projFile);
 
+                var changedSomething = false;
+
                 foreach (var pRef in xml.SelectNodes("//ProjectReference").Cast<XmlNode>())
                 {
                     var includeAtt = pRef.Attributes["Include"];
@@ -113,6 +121,10 @@ namespace Dotnet.Rename
                     if (includePath == null) continue;
                     includePath = P(includePath);
                     if (Path.IsPathRooted(includePath)) continue;
+
+                    var refFileName = Path.GetFileName(includePath);
+                    if (string.Compare(refFileName, context.ProjectFileName, StringComparison.InvariantCultureIgnoreCase) != 0)
+                        continue;
 
                     var fullPath = Path.Combine(projDirectory, includePath);
 
@@ -131,15 +143,17 @@ namespace Dotnet.Rename
                         if (!File.Exists(newFullPath))
                             throw new InvalidProgramException($"Something is fishy, {newFullPath} file should exist.");
 
+                        changedSomething = true;
                         includeAtt.Value = newIncludePath;
                     }
                 }
 
-                xml.Save(projFile);
+                if (changedSomething)
+                    xml.Save(projFile);
             }
         }
 
-        public static async Task MoveSolutionsReferencesAsync(RunContext context)
+        public static async Task ChangeSolutionsReferencesAsync(RunContext context)
         {
             var solutions = Directory.GetFiles(context.RootPath, "*.sln", SearchOption.AllDirectories);
 
@@ -186,17 +200,12 @@ namespace Dotnet.Rename
             return true;
         }
 
-        /// <summary>
-        /// Move the source project to the target project fil
-        /// using : "git mv" command and falling back to
-        /// simple directory move if no source controlled files
-        /// </summary>
-        private static Task MoveProjectFileAsync(string source, string target)
+        private static bool ShouldUseGit(RunContext context)
         {
             var startInfo = new ProcessStartInfo
             {
                 FileName = "git",
-                Arguments = $"mv \"{source}\" \"{target}\" ",
+                Arguments = $"ls-files --error {context.ProjectFullPath}",
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
@@ -208,28 +217,66 @@ namespace Dotnet.Rename
                 if (gitProcess.ExitCode != 0)
                 {
                     var error = gitProcess.StandardError.ReadToEnd();
-                    if (!error.Contains("not under version control"))
-                    {
-                        throw new Exception($"Git command failed: '{error}'");
-                    }
-                    else
-                    {
-                        Directory.CreateDirectory(Path.GetDirectoryName(target));
-                        File.Move(source, target);
-                    }
+                    context.Logger($"Cannot use git : {error}");
+                    return false;
+                }
+                else
+                {
+                    return true;
                 }
             }
-
-            return Task.CompletedTask;
         }
 
+        //    await MoveFolderUsingGit(sourceDirectory, targetDirectory);
+        //}
+        //        else
+        //        {
+        //            await StandardMoveFolder(sourceDirectory, targetDirectory)
+
+        /// <summary>
+        /// Move the source project to the target project fil
+        /// using : "git mv" command and falling back to
+        /// simple directory move if no source controlled files
+        /// </summary>
+        //private static Task MoveProjectFileAsync(string source, string target)
+        //    {
+        //        var startInfo = new ProcessStartInfo
+        //        {
+        //            FileName = "git",
+        //            Arguments = $"mv \"{source}\" \"{target}\" ",
+        //            RedirectStandardError = true,
+        //            RedirectStandardOutput = true,
+        //            UseShellExecute = false,
+        //        };
+
+        //        Directory.CreateDirectory(Path.GetDirectoryName(target));
+
+        //        using (var gitProcess = Process.Start(startInfo))
+        //        {
+        //            gitProcess.WaitForExit();
+        //            if (gitProcess.ExitCode != 0)
+        //            {
+        //                var error = gitProcess.StandardError.ReadToEnd();
+        //                if (!error.Contains("not under version control"))
+        //                {
+        //                    throw new Exception($"Git command failed: '{error}'");
+        //                }
+        //                else
+        //                {
+        //                    File.Move(source, target);
+        //                }
+        //            }
+        //        }
+
+        //        return Task.CompletedTask;
+        //    }
 
         /// <summary>
         /// Move the source directory to the target directory
         /// using : "git mv" command and falling back to
         /// simple directory move if no source controlled files
         /// </summary>
-        static Task MoveDirectoryAsync(string source, string target)
+        static void MoveFolderUsingGit(string source, string target)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -240,34 +287,33 @@ namespace Dotnet.Rename
                 UseShellExecute = false,
             };
 
+            Directory.CreateDirectory(Path.GetDirectoryName(target));
+
             using (var gitProcess = Process.Start(startInfo))
             {
                 gitProcess.WaitForExit();
                 if (gitProcess.ExitCode != 0)
                 {
                     var error = gitProcess.StandardError.ReadToEnd();
-                    if (!error.Contains("source directory is empty"))
-                    {
-                        throw new Exception($"Git command failed: '{error}'");
-                    }
-                    else
-                    {
-                        var newFolder = Path.GetDirectoryName(target);
-                        Directory.CreateDirectory(newFolder);
-                        foreach (var file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
-                        {
-                            var relativePath = Path.GetRelativePath(source, file);
-                            var newPath = Path.Combine(target, relativePath);
-
-                            Directory.CreateDirectory(Path.GetDirectoryName(newPath));
-                            File.Move(file, newPath);
-                        }
-                        Directory.Delete(source, true);
-                    }
+                    throw new Exception($"Git command failed: '{error}'");
                 }
             }
+        }
 
-            return Task.CompletedTask;
+        /// <summary>
+        /// Move the source directory to the target directory
+        /// </summary>
+        static void StandardMoveFolder(string source, string target)
+        {
+            foreach (var file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
+            {
+                var relativePath = Path.GetRelativePath(source, file);
+                var newPath = Path.Combine(target, relativePath);
+
+                Directory.CreateDirectory(Path.GetDirectoryName(newPath));
+                File.Move(file, newPath);
+            }
+            Directory.Delete(source, true);
         }
     }
 }
