@@ -84,17 +84,13 @@ namespace Dotnet.Rename
         {
             context.Logger($"Moving project file '{context.ProjectFullPath}' to '{context.TargetFullPath}'.");
 
-            var sourceDirectory = Path.GetDirectoryName(context.ProjectFullPath);
-            var targetDirectory = Path.GetDirectoryName(context.TargetFullPath);
-            context.Logger($"Moving directory '{sourceDirectory}' to '{targetDirectory}'.");
-
             if (ShouldUseGit(context))
             {
-                MoveFolderUsingGit(sourceDirectory, targetDirectory);
+                MoveFolderUsingGit(context);
             }
             else
             {
-                StandardMoveFolder(sourceDirectory, targetDirectory);
+                StandardMoveFolder(context);
             }
         }
 
@@ -227,69 +223,25 @@ namespace Dotnet.Rename
             }
         }
 
-        //    await MoveFolderUsingGit(sourceDirectory, targetDirectory);
-        //}
-        //        else
-        //        {
-        //            await StandardMoveFolder(sourceDirectory, targetDirectory)
-
         /// <summary>
-        /// Move the source project to the target project fil
-        /// using : "git mv" command and falling back to
-        /// simple directory move if no source controlled files
+        /// Move the source directory to the target directory using : "git mv" command
         /// </summary>
-        //private static Task MoveProjectFileAsync(string source, string target)
-        //    {
-        //        var startInfo = new ProcessStartInfo
-        //        {
-        //            FileName = "git",
-        //            Arguments = $"mv \"{source}\" \"{target}\" ",
-        //            RedirectStandardError = true,
-        //            RedirectStandardOutput = true,
-        //            UseShellExecute = false,
-        //        };
-
-        //        Directory.CreateDirectory(Path.GetDirectoryName(target));
-
-        //        using (var gitProcess = Process.Start(startInfo))
-        //        {
-        //            gitProcess.WaitForExit();
-        //            if (gitProcess.ExitCode != 0)
-        //            {
-        //                var error = gitProcess.StandardError.ReadToEnd();
-        //                if (!error.Contains("not under version control"))
-        //                {
-        //                    throw new Exception($"Git command failed: '{error}'");
-        //                }
-        //                else
-        //                {
-        //                    File.Move(source, target);
-        //                }
-        //            }
-        //        }
-
-        //        return Task.CompletedTask;
-        //    }
-
-        /// <summary>
-        /// Move the source directory to the target directory
-        /// using : "git mv" command and falling back to
-        /// simple directory move if no source controlled files
-        /// </summary>
-        static void MoveFolderUsingGit(string source, string target)
+        static void MoveFolderUsingGit(RunContext context)
         {
-            var startInfo = new ProcessStartInfo
+            var source = Path.GetDirectoryName(context.ProjectFullPath);
+            var target = Path.GetDirectoryName(context.TargetFullPath);
+            context.Logger($"Moving directory '{source}' to '{target}'.");
+
+            Directory.CreateDirectory(Path.GetDirectoryName(target));
+
+            using (var gitProcess = Process.Start(new ProcessStartInfo
             {
                 FileName = "git",
                 Arguments = $"mv \"{source}\" \"{target}\" ",
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
-            };
-
-            Directory.CreateDirectory(Path.GetDirectoryName(target));
-
-            using (var gitProcess = Process.Start(startInfo))
+            }))
             {
                 gitProcess.WaitForExit();
                 if (gitProcess.ExitCode != 0)
@@ -298,13 +250,37 @@ namespace Dotnet.Rename
                     throw new Exception($"Git command failed: '{error}'");
                 }
             }
+
+            if (context.HasFileNameChanged())
+            {
+                using (var gitProcess = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "git",
+                    Arguments = $"mv \"{target}/{context.ProjectFileName}\" \"{target}/{context.TargetFileName}\" ",
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                }))
+                {
+                    gitProcess.WaitForExit();
+                    if (gitProcess.ExitCode != 0)
+                    {
+                        var error = gitProcess.StandardError.ReadToEnd();
+                        throw new Exception($"Git command failed: '{error}'");
+                    }
+                }
+            }
         }
 
         /// <summary>
         /// Move the source directory to the target directory
         /// </summary>
-        static void StandardMoveFolder(string source, string target)
+        static void StandardMoveFolder(RunContext context)
         {
+            var source = Path.GetDirectoryName(context.ProjectFullPath);
+            var target = Path.GetDirectoryName(context.TargetFullPath);
+            context.Logger($"Moving directory '{source}' to '{target}'.");
+
             foreach (var file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
             {
                 var relativePath = Path.GetRelativePath(source, file);
@@ -313,7 +289,13 @@ namespace Dotnet.Rename
                 Directory.CreateDirectory(Path.GetDirectoryName(newPath));
                 File.Move(file, newPath);
             }
+
             Directory.Delete(source, true);
+
+            if (context.HasFileNameChanged())
+            {
+                File.Move(Path.Combine(target, context.ProjectFileName), Path.Combine(target, context.TargetFileName));
+            }
         }
     }
 }

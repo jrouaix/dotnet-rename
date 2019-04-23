@@ -104,7 +104,10 @@ namespace Dotnet.Rename
             return newRelative;
         }
 
-
+        /// <summary>
+        /// Return true if the project (.csproj) file name changed
+        /// </summary>
+        public bool HasFileNameChanged() => string.Compare(ProjectFileName, TargetFileName, StringComparison.InvariantCultureIgnoreCase) != 0;
 
         public override string ToString() => $"{Project} => {TargetPath}";
     }
