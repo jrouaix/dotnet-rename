@@ -14,8 +14,8 @@ namespace Dotnet.Rename
 {
     class Program
     {
-        public const string PROJECT_ARGUMENT = "-p | --project";
-        public const string TARGET_ARGUMENT = "-t | --target";
+        public const string PROJECT_ARGUMENT_NAME = "Project";
+        public const string TARGET_ARGUMENT_NAME = "Target";
         public const string SUBFOLDER_OPTION = "-s | --subfolder";
         private const string HelpOptions = "-? | -h | --help";
 
@@ -25,18 +25,17 @@ namespace Dotnet.Rename
             var app = new CommandLineApplication();
             app.HelpOption(HelpOptions);
 
-            var projectParam = app.Argument(PROJECT_ARGUMENT, "Enter the relative path to a project file. ex: MyProject/MyProject.csproj");
-            var targetParam = app.Argument(TARGET_ARGUMENT, "Enter the new name of the project. ex: MyNewProjectName");
+            var projectParam = app.Argument(PROJECT_ARGUMENT_NAME, "Enter the relative path to a project file. ex: MyProject/MyProject.csproj");
+            var targetParam = app.Argument(TARGET_ARGUMENT_NAME, "Enter the new name of the project. ex: MyNewProjectName");
             var subfolderOption = app.Option(SUBFOLDER_OPTION, "Enter the relative (from current directory) path to a subfolder where the new project (and project folder) will be placed.", CommandOptionType.SingleValue);
-
 
             app.OnExecute(async () =>
             {
                 var errors = new List<string>();
                 if (projectParam.Value == null)
-                    errors.Add($"{PROJECT_ARGUMENT} parameter is required.");
+                    errors.Add($"{PROJECT_ARGUMENT_NAME} parameter is required.");
                 if (targetParam.Value == null)
-                    errors.Add($"{TARGET_ARGUMENT} parameter is required.");
+                    errors.Add($"{TARGET_ARGUMENT_NAME} parameter is required.");
 
                 if (ShouldExit(app, errors)) return 1;
 
@@ -44,7 +43,7 @@ namespace Dotnet.Rename
                     errors.Add($"Unable to find file {projectParam.Value}.");
 
                 if (!string.IsNullOrWhiteSpace(Path.GetDirectoryName(targetParam.Value)))
-                    errors.Add($"{TARGET_ARGUMENT} should not be a path. It's just a name.");
+                    errors.Add($"{TARGET_ARGUMENT_NAME} should not be a path. It's just a name.");
 
                 if (ShouldExit(app, errors)) return 1;
 
