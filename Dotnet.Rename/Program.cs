@@ -3,12 +3,14 @@ using Microsoft.Extensions.CommandLineUtils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using static Dotnet.Rename.PathHelper;
+using Console = Colorful.Console;
 
 namespace Dotnet.Rename
 {
@@ -18,6 +20,10 @@ namespace Dotnet.Rename
         public const string TARGET_ARGUMENT_NAME = "Target";
         public const string SUBFOLDER_OPTION = "-s | --subfolder";
         private const string HelpOptions = "-? | -h | --help";
+
+        public static readonly Color ErrorColor = Color.OrangeRed;
+        static void Log(string text) => Console.WriteLine(text);
+        static void Error(string text) => Console.Error.WriteLine(text, ErrorColor);
 
         static void Main(string[] args)
         {
@@ -52,7 +58,7 @@ namespace Dotnet.Rename
                     projectParam.Value,
                     targetParam.Value,
                     subfolderOption.HasValue() ? subfolderOption.Value() : null,
-                    Console.WriteLine
+                    Log
                     );
 
                 await RunAsync(context);
@@ -66,7 +72,7 @@ namespace Dotnet.Rename
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.Message);
+                Error(ex.Message);
                 Environment.Exit(1);
             }
         }
@@ -109,17 +115,21 @@ namespace Dotnet.Rename
 
                 var changedSomething = false;
 
-                foreach (var pRef in xml.SelectNodes("//ProjectReference").Cast<XmlNode>())
+                var projectReferences = xml.SelectNodes("//ProjectReference").Cast<XmlNode>().ToArray();
+
+                foreach (var pRef in projectReferences)
                 {
                     var includeAtt = pRef.Attributes["Include"];
-                    var includePath = includeAtt?.Value;
+                    if (includeAtt == null) continue;
+                    var includePath = P(includeAtt.Value);
                     if (includePath == null) continue;
-                    includePath = P(includePath);
                     if (Path.IsPathRooted(includePath)) continue;
 
                     var refFileName = Path.GetFileName(includePath);
-                    if (string.Compare(refFileName, context.ProjectFileName, StringComparison.InvariantCultureIgnoreCase) != 0)
+                    if (!isTheRenamedProject && string.Compare(refFileName, context.ProjectFileName, StringComparison.InvariantCultureIgnoreCase) != 0)
+                    {
                         continue;
+                    }
 
                     var fullPath = Path.Combine(projDirectory, includePath);
 
@@ -144,7 +154,13 @@ namespace Dotnet.Rename
                 }
 
                 if (changedSomething)
+                {
                     xml.Save(projFile);
+                }
+                else
+                {
+                    Log("... No change on this file.");
+                }
             }
         }
 
@@ -189,7 +205,7 @@ namespace Dotnet.Rename
             if (errors.Count == 0) return false;
 
             foreach (var err in errors)
-                Console.Error.WriteLine(err);
+                Error(err);
             app.ShowHelp();
 
             return true;
@@ -233,10 +249,14 @@ namespace Dotnet.Rename
 
             Directory.CreateDirectory(Path.GetDirectoryName(target));
 
+            var arguments = context.HasFileNameChanged()
+                ? $"mv \"{Path.Combine(target, context.ProjectFileName)}\" \"{Path.Combine(target, context.TargetFileName)}\" "
+                : $"mv \"{source}\" \"{target}\" ";
+
             using (var gitProcess = Process.Start(new ProcessStartInfo
             {
                 FileName = "git",
-                Arguments = $"mv \"{source}\" \"{target}\" ",
+                Arguments = arguments,
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
@@ -247,26 +267,6 @@ namespace Dotnet.Rename
                 {
                     var error = gitProcess.StandardError.ReadToEnd();
                     throw new Exception($"Git command failed: '{error}'");
-                }
-            }
-
-            if (context.HasFileNameChanged())
-            {
-                using (var gitProcess = Process.Start(new ProcessStartInfo
-                {
-                    FileName = "git",
-                    Arguments = $"mv \"{target}/{context.ProjectFileName}\" \"{target}/{context.TargetFileName}\" ",
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                }))
-                {
-                    gitProcess.WaitForExit();
-                    if (gitProcess.ExitCode != 0)
-                    {
-                        var error = gitProcess.StandardError.ReadToEnd();
-                        throw new Exception($"Git command failed: '{error}'");
-                    }
                 }
             }
         }

@@ -8,7 +8,7 @@ using Xunit.Abstractions;
 
 namespace Dotnet.Rename.Tests
 {
-    public class PackAndUseTests : IDisposable
+    public class ToolManagementTests : IDisposable
     {
         const string PACKAGE_NAME = "Dotnet.Rename";
         const string COMMAND_NAME = "dotnet-rename";
@@ -16,7 +16,7 @@ namespace Dotnet.Rename.Tests
         private readonly string _tmpOutput;
         private readonly string _solutionFolder;
 
-        public PackAndUseTests(ITestOutputHelper output)
+        public ToolManagementTests(ITestOutputHelper output)
         {
             _output = output;
             _solutionFolder = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "../../../.."));
@@ -75,7 +75,14 @@ namespace Dotnet.Rename.Tests
             }
         }
 
-
+        [Fact(Skip = "does not work on linux")]
+        //[Fact]
+        public void Install_local_tool_from_this_sources()
+        {
+            UninstallTool();
+            PackTool();
+            InstallTool();
+        }
 
         private void InstallTool()
         {

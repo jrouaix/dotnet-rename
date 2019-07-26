@@ -4,6 +4,12 @@ A global tool to reduce pain when moving/renaming projects repository wide.
 
 An attemp to fill the need for https://github.com/dotnet/project-system/issues/3511
 
+### Warning /!\
+
+This tool can fail ! It has no atomic/transactional behavior so it can leave a big mess in your project/solution if it fails in the middle of a rename. It's by design !
+
+**BEFORE USING IT** : commit your work !
+
 ### Installation
 
 Installation is very easy. Just run this command and the tool will be installed. 
