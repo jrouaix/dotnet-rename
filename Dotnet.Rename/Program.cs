@@ -249,14 +249,10 @@ namespace Dotnet.Rename
 
             Directory.CreateDirectory(Path.GetDirectoryName(target));
 
-            var arguments = context.HasFileNameChanged()
-                ? $"mv \"{Path.Combine(target, context.ProjectFileName)}\" \"{Path.Combine(target, context.TargetFileName)}\" "
-                : $"mv \"{source}\" \"{target}\" ";
-
             using (var gitProcess = Process.Start(new ProcessStartInfo
             {
                 FileName = "git",
-                Arguments = arguments,
+                Arguments = $"mv \"{source}\" \"{target}\" ",
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
@@ -267,6 +263,26 @@ namespace Dotnet.Rename
                 {
                     var error = gitProcess.StandardError.ReadToEnd();
                     throw new Exception($"Git command failed: '{error}'");
+                }
+            }
+
+            if (context.HasFileNameChanged())
+            {
+                using (var gitProcess = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "git",
+                    Arguments = $"mv \"{Path.Combine(target, context.ProjectFileName)}\" \"{Path.Combine(target, context.TargetFileName)}\" ",
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                }))
+                {
+                    gitProcess.WaitForExit();
+                    if (gitProcess.ExitCode != 0)
+                    {
+                        var error = gitProcess.StandardError.ReadToEnd();
+                        throw new Exception($"Git command failed: '{error}'");
+                    }
                 }
             }
         }
